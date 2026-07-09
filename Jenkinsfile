@@ -1,12 +1,13 @@
 pipeline {
-  agent {label "agent"}
+  agent {label 'agent'}
   tools {
-    jdk 'Java21'
+    jdk 'jdk21'
     maven 'maven3'
   }
   stages {
     stage ("clean Workspace")
-      steps {cleanWs()
+      steps {
+        cleanWs()
             }
   }
    stage ("checkout from scm"){
