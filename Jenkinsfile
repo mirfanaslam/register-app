@@ -16,7 +16,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main' , CredentialId: 'github', url: 'https://github.com/mirfanaslam/register-app.git'
+                git branch: 'main' , credentialsId: 'github', url: 'https://github.com/mirfanaslam/register-app.git'
             }
         }
 
