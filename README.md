@@ -48,6 +48,6 @@ stage("Trivy Scan Image") {
 			trivy image -f json -o trivy-image.json ${env.IMAGE_TAG} 
 			# HTML report using built-in HTML format 
 			trivy image -f table -o trivy-image.txt ${env.IMAGE_TAG} 
-			# Fail build if HIGH/CRITICAL vulnerabilities found # 
+			# Fail build if HIGH/CRITICAL vulnerabilities found  
 			trivy image --exit-code 1 --severity HIGH,CRITICAL ${env.IMAGE_TAG} || true """ } } }
 
