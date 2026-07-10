@@ -43,7 +43,7 @@ stage("Trivy Scan") {
 stage("Trivy Scan Image") {
 	steps {
 		script {
-			sh """ echo '🔍 Running Trivy scan on ${env.IMAGE_TAG}' 
+			sh """ echo ' Running Trivy scan on ${env.IMAGE_TAG}' 
 			# JSON report 
 			trivy image -f json -o trivy-image.json ${env.IMAGE_TAG} 
 			# HTML report using built-in HTML format 
