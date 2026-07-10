@@ -3,7 +3,7 @@ register-app
 Test93
 
 ---------
-### 
+### in short form line by line
 stage("Trivy Scan") {
     steps {
         script {
