@@ -78,6 +78,7 @@ docker run -d --name sonarqube \
   sonarqube:lts-community
   ======================================
 
+
 ===================Jenkins Plugins to Install=============================
 Eclipse Temurin installer Plugin
 NodeJS
@@ -101,6 +102,15 @@ username: mirfanaslam
 Passwork/Token: 
 
 ====================
+==============================================Integrate and configure sonarqube===============================
+http://IP:9000/
+Click >Security> token name> "jenkins-sonarqube-token"  and go to jenkins > credentials > secret  text (past token from sonarqube to jenkins)
+
+go to jenkins>system> name : sonarqube-server and IP:port.
+go to jenkins>tools>sonarqube scanner installation > give name sonarqube-server and its  autmatically instlled
+
+
+
 
 
 
