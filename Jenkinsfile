@@ -1,18 +1,20 @@
 pipeline {
-    agent {label 'agent'}
+    agent {
+        label 'agent'
+    }
 
     tools {
         jdk 'jdk17'
         maven 'maven3'
     }
+
     environment {
-        APP_NAME = "register-app-pipeline"
-            RELEASE = "1.0.0"
-            DOCKER_USER = "mirfanaslam"
-            DOCKER_PASS = 'dockerhub'
-            IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
-            IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
-        
+        APP_NAME    = "register-app-pipeline"
+        RELEASE     = "1.0.0"
+        DOCKER_USER = "mirfanaslam"
+        DOCKER_PASS = "dockerhub"     // Jenkins credentials ID
+        IMAGE_NAME  = "${DOCKER_USER}/${APP_NAME}"
+        IMAGE_TAG   = "${RELEASE}-${BUILD_NUMBER}"
     }
 
     stages {
@@ -25,7 +27,9 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main' , credentialsId: 'github', url: 'https://github.com/mirfanaslam/register-app.git'
+                git branch: 'main',
+                    credentialsId: 'github',
+                    url: 'https://github.com/mirfanaslam/register-app.git'
             }
         }
 
@@ -34,51 +38,59 @@ pipeline {
                 sh 'mvn clean package'
             }
         }
-        stage('sonarqube analysiz'){
+
+        stage('SonarQube Analysis') {
             steps {
                 script {
-                    withSonarQubeEnv (credentialsId: 'jenkins-sonarqube-token'){
-                    sh "mvn sonar:sonar"
-                }
-            }
-            }
-        }
-        stage ('quality gate'){
-            steps{
-                script{
-                    waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonarqube-token'
-                }
-            }
-        }
-        stage ('Build and push'){
-            steps{
-                script{
-                    docker.withRegistry('',DOCKER_PASS) {
-                        docker_image = docker.build "${IMAGE_NAME}"
+                    withSonarQubeEnv('sonarqube') {
+                        sh 'mvn sonar:sonar'
                     }
-
-                    docker.withRegistry('',DOCKER_PASS) {
-                        docker_image.push("${IMAGE_TAG}")
-                        docker_image.push('latest')
                 }
             }
         }
-            stage("Trivy Scan") {
-           steps {
-               script {
-	            sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mirfanaslam/register-app-pipeline:latest --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
-               }
-           }
-       }
-			stage ('Cleanup Artifacts') {
-           steps {
-               script {
-                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker rmi ${IMAGE_NAME}:latest"
-               }
-          }
-       }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    def dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_PASS) {
+                        dockerImage.push("${IMAGE_TAG}")
+                        dockerImage.push("latest")
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh """
+                docker run --rm \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  aquasec/trivy image \
+                  ${IMAGE_NAME}:latest \
+                  --no-progress \
+                  --scanners vuln \
+                  --exit-code 0 \
+                  --severity HIGH,CRITICAL \
+                  --format table
+                """
+            }
+        }
+
+        stage('Cleanup Artifacts') {
+            steps {
+                sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+                sh "docker rmi ${IMAGE_NAME}:latest || true"
+            }
+        }
     }
-		
-}
 }
