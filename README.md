@@ -146,6 +146,114 @@ stage("Trivy Scan") {
            }
        }
 
+	   <br>
+	   =========Install eksctl cluster============
+	   
+curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.35.3/2026-04-08/bin/linux/amd64/kubectl
+
+curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.35.3/2026-04-08/bin/linux/amd64/kubectl.sha256
+
+chmod +x ./kubectl
+
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$HOME/bin:$PATH
+
+
+*******
+# for ARM systems, set ARCH to: `arm64`, `armv6` or `armv7`
+ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+PLATFORM=$(uname -s)_$ARCH
+
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
+
+# (Optional) Verify checksum
+curl -sL "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_checksums.txt" | grep $PLATFORM | sha256sum --check
+
+tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+
+sudo install -m 0755 /tmp/eksctl /usr/local/bin && rm /tmp/eksctl
+
+***************
+Setup Kubernetes using eksctl
+Refer--https://github.com/aws-samples/eks-workshop/issues/734
+$ eksctl create cluster --name virtualtechbox-cluster \
+--region ap-south-1 \
+--node-type t2.small \
+--nodes 3 \
+
+$ kubectl get nodes
+
+**************************
+===================================ArgoCD install on EKS cluster and add eks cluster to ArgoCD=================
+
+1 ) First, create a namespace
+    $ kubectl create namespace argocd
+
+2 ) Next, let's apply the yaml configuration files for ArgoCd
+    $ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+3 ) Now we can view the pods created in the ArgoCD namespace.
+    $ kubectl get pods -n argocd
+
+4 ) To interact with the API Server we need to deploy the CLI:
+    $ curl --silent --location -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/v2.4.7/argocd-linux-amd64
+    $ chmod +x /usr/local/bin/argocd
+
+5 ) Expose argocd-server
+    $ kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+
+6 ) Wait about 2 minutes for the LoadBalancer creation
+    $ kubectl get svc -n argocd
+
+7 ) Get pasword and decode it.
+    $ kubectl get secret argocd-initial-admin-secret -n argocd -o yaml
+    $ echo WXVpLUg2LWxoWjRkSHFmSA== | base64 --decode
+
+## Add EKS Cluster to ArgoCD
+9 ) login to ArgoCD from CLI
+    $ argocd login a2255bb2bb33f438d9addf8840d294c5-785887595.ap-south-1.elb.amazonaws.com --username admin
+
+10 ) 
+     $ argocd cluster list
+
+11 ) Below command will show the EKS cluster
+     $ kubectl config get-contexts
+
+12 ) Add above EKS cluster to ArgoCD with below command
+     $ argocd cluster add i-08b9d0ff0409f48e7@virtualtechbox-cluster.ap-south-1.eksctl.io --name virtualtechbox-eks-cluster
+
+13 ) $ kubectl get svc
+============================================================= Cleanup =============================================================
+$ kubectl get all
+$ kubectl delete deployment.apps/virtualtechbox-regapp       //it will delete the deployment
+$ kubectl delete service/virtualtechbox-service              //it will delete the service
+*******************************
+eksctl get cluster --region us-east-1
+
+connect with eks for kubectl
+aws eks update-kubeconfig \
+  --region <your-region> \
+  --name <cluster-name>
+
+  kubectl cluster-info
+
+  kubectl config current-context
+
+ubuntu@ip-172-31-42-141:~$ aws cloudformation list-stacks --region us-east-1    
+
+eksctl get nodegroup --cluster <name> --region us-east-1
+
+IF NODE IS NOT CREAT SO YOU CAN CREATE AFTER CREATING THE CLUSTER
+
+eksctl create nodegroup \
+  --cluster my-cluster \
+  --region us-east-1 \
+  --name worker-nodes \
+  --nodes 1 \
+  --nodes-min 1 \
+  --nodes-max 1 \
+  --node-type t2.small
+  
+  
 ### difference
 | Feature        | First Stage                | Second Stage                            |
 | -------------- | -------------------------- | --------------------------------------- |
